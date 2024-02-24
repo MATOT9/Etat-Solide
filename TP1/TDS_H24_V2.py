@@ -64,7 +64,6 @@ class HardSphere:
     pos: np.ndarray[np.float64] = field(init=False)
     vel: np.ndarray[np.float64] = field(init=False)
 
-
     def __post_init__(self, T):
         self.pos = np.random.uniform(
             low=0,
