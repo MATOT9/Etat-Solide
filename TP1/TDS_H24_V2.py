@@ -1,12 +1,11 @@
 """Hard-sphere kinetic gas theory simulation using plotly."""
 
 
-from typing import Iterable
 from dataclasses import dataclass, field, InitVar
 
 import numpy as np
-import plotly.graph_objs as go
 from scipy import constants as cte
+from plotly import graph_objs as go
 
 
 @dataclass(slots=True, repr=False, order=False, eq=False)
