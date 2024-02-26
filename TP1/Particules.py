@@ -29,4 +29,41 @@ class Particule:
 
 
 def collisionAtomes(atome1: Particule, atome2: Particule):
-    pass
+    # Positions et vitesses relatives des deux particules
+    v1: vp.vector = atome1.p/atome1.masse
+    v2: vp.vector = atome2.p/atome2.masse
+    rrel: vp.vector = atome2.pos - atome1.pos
+    vrel: vp.vector = v1 - v2
+
+    # Exclusion de cas où il n'y a pas de changements à faire, 2 cas:
+    # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
+    # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
+    if vrel.mag2 == 0 or rrel.mag > 2*rAtom:
+        return None
+
+    # Calcule la distance et temps d'interpénétration des sphères dures qui ne doit pas se produire dans ce modèle
+    dx: float = vp.dot(rrel, vrel.hat)
+    dy: float = vp.cross(rrel, vrel.hat).mag
+    # Alpha est l'angle du triangle composé de rrel, la trajectoire de l'atome 2 et la ligne
+    # entre le centre de l'atome 1 vers le centre de l'atome 2 où les deux atomes se touchent
+    alpha = vp.asin(dy / (2 * rAtom))
+    # Distance parcourue à l'intérieur du l'atome à partir du premier contact
+    d: float = (atome1.rayon+atome2.rayon) * vp.cos(alpha) - dx
+    # Temps écoulé pour se déplacer de la première collisions à la position à l'intérieur de l'atome
+    deltat: float = d / vrel.mag
+
+    # Transform momenta to center-of-momentum (com) frame
+    Vcom: vp.vector = (atome1.p+atome2.p) / (atome1.masse+atome2.masse)
+    pcom1 = atome1.p - atome1.masse*Vcom
+    pcom2 = atome2.p - atome2.masse*Vcom
+
+    # Bounce in center-of-momentum (com) frame
+    rrel = vp.hat(rrel)
+    atome1.p -= 2 * vp.dot(pcom1, rrel) * rrel
+    atome2.p -= 2 * vp.dot(pcom2, rrel) * rrel
+
+    # Change l'interpénétration des sphères par la cinétique de collision,
+    # puis avance de deltat dans le temps, ramenant au même temps où sont
+    # rendues les autres sphères dans l'itération
+    atome1.pos += (atome1.p / atome1.masse - v1) * deltat
+    atome2.pos += (atome2.p / atome2.masse - v2) * deltat

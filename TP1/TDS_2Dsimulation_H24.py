@@ -121,58 +121,9 @@ def main():
         # LET'S FIND THESE COLLISIONS!!!
         hitlist: list[list[int]] = checkCollisions()
 
-        # CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS ENTRE SPHÈRES
-        for ij in hitlist:
-            # nouvelles variables pour chaque paire de sphères encollision
-            i, j = ij
-            ptot = p[i] + p[j]
-            posi = apos[i]
-            posj = apos[j]
-            vi = p[i] / mass
-            vj = p[j] / mass
-
-            # vitesse du référentiel barycentrique/center-of-momentum (com) frame
-            Vcom = ptot / (2 * mass)
-
-            # vecteurs pour la distance entre les centres des 2 sphères et pour la
-            # différence de vitesse entre les 2 sphères
-            rrel = posi - posj
-            vrel = vj - vi
-
-            # exclusion de cas où il n'y a pas de changements à faire, 2 cas:
-            # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
-            # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
-            if vrel.mag2 == 0 or rrel.mag > 2*rAtom:
-                continue
-
-            # calcule la distance et temps d'interpénétration des sphères dures qui ne doit pas se produire dans ce modèle
-            dx = vp.dot(rrel, vrel.hat)
-            dy = vp.cross(rrel, vrel.hat).mag
-            alpha = vp.asin(dy / (2 * rAtom))  # alpha is the angle of the triangle composed of rrel, path of atom j, and a line from the center of atom i to the center of atom j where atome j hits atom i
-            d = (2 * rAtom) * vp.cos(alpha) - dx # distance traveled into the atom from first contact
-            deltat = d / vrel.mag         # time spent moving from first contact to position inside atom
-
-            # CHANGE L'INTERPÉNÉTRATION DES SPHÈRES PAR LA CINÉTIQUE DE COLLISION
-            posi = posi-vi*deltat
-            posj = posj-vj*deltat
-
-            # transform momenta to center-of-momentum (com) frame
-            pcomi = p[i]-mass*Vcom
-            pcomj = p[j]-mass*Vcom
-
-            # bounce in center-of-momentum (com) frame
-            rrel = vp.hat(rrel)
-            pcomi -= 2 * vp.dot(pcomi, rrel) * rrel
-            pcomj -= 2 * vp.dot(pcomj, rrel) * rrel
-
-            # transform momenta back to lab frame
-            p[i] = pcomi + mass * Vcom
-            p[j] = pcomj + mass * Vcom
-
-            # move forward deltat in time, ramenant au même temps où sont rendues
-            # les autres sphères dans l'itération
-            apos[i] = posi + (p[i] / mass) * deltat
-            apos[j] = posj + (p[j] / mass) * deltat
+        # Calcule le résultat des collisions et bouge les atomes
+        for i, j in hitlist:
+            collisionAtomes(atomes[i], atomes[j])
 
         # Met à jour la liste des variables à suivre
         # Unpack les paires de collisions
