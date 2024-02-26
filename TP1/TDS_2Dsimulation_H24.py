@@ -48,11 +48,11 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int) -> [list[Particule], l
         [atom.update(dt, L) for atom in atoms]
 
         # LET'S FIND THESE COLLISIONS!!!
-        hitlist: list[list[int]] = checkCollisions(atoms)
+        hitlist: list[list[int]] = Particule.checkCollisionsAtomes(atoms)
 
         # Calcule le résultat des collisions et bouge les atomes
         for i, j in hitlist:
-            collisionAtomes(atoms[i], atoms[j])
+            Particule.collisionAtomes(atoms[i], atoms[j])
 
         # Met à jour la liste des variables à suivre
         # Unpack les paires de collisions

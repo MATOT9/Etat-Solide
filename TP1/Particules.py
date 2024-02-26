@@ -7,15 +7,19 @@ import vpython as vp
 
 
 class Particule:
-    def __init__(self, position: vp.vector, qteMvt: vp.vector, masse: float, rayon: float, couleur: vp.color):
+    def __init__(self, position: vp.vector, qteMvt: vp.vector, masse: float, rayon: float, charge: float=0, couleur: vp.color=vp.color.gray(0.7)):
         self.pos: vp.vector = position
         self.p: vp.vector = qteMvt
         self.masse: float = masse
         self.rayon: float = rayon
+        self.charge: float = charge
         self.sphere = vp.simple_sphere(pos=position, radius=rayon, color=couleur)
 
 
-    def update(self, dt: float, L: float) -> None:
+    def update(self, dt: float, L: float, E: float) -> None:
+        # Le champ électrique accélère la particule
+            # À faire
+
         # Fait un pas à la particule pour un temps dt
         vitesse: vp.vector = self.p/self.masse
         self.pos += vitesse * dt
@@ -34,66 +38,84 @@ class Particule:
         self.sphere.pos = self.pos
 
 
-# FONCTION POUR IDENTIFIER LES COLLISIONS, I.E. LORSQUE LA DISTANCE ENTRE LES CENTRES DE 2 SPHÈRES EST À LA LIMITE DE S'INTERPÉNÉTRER ####
-def checkCollisions(particules: list[Particule]) -> list[list[int]]:
-    hitlist: list[list[int]] = []
+    # FONCTION POUR IDENTIFIER LES COLLISIONS, I.E. LORSQUE LA DISTANCE ENTRE LES CENTRES DE 2 SPHÈRES EST À LA LIMITE DE S'INTERPÉNÉTRER ####
+    @staticmethod
+    def checkCollisionsAtomes(atomes: list[Particule]) -> list[list[int]]:
+        hitlist: list[list[int]] = []
 
-    # distance critique où les 2 sphères entre en contact à la limite de leur rayon
-    r2: float = (2*particules[0].rayon)**2
+        # distance critique où les 2 sphères entre en contact à la limite de leur rayon
+        r2: float = (2*atomes[0].rayon)**2
 
-    for i in range(len(particules)):
-        posi: vp.vector = particules[i].pos
-        for j in range(i) :
-            posj: vp.vector = particules[j].pos
+        for i in range(len(atomes)):
+            posi: vp.vector = atomes[i].pos
+            for j in range(i) :
+                posj: vp.vector = atomes[j].pos
 
-            # la boucle dans une boucle itère pour calculer cette distance
-            # vectorielle dr entre chaque paire de sphère
-            dr: vp.vector = posi - posj
-            if vp.mag2(dr) < r2:
-                # liste numérotant toutes les paires de sphères en collision
-                hitlist.append([i,j])
-    return hitlist
+                # la boucle dans une boucle itère pour calculer cette distance
+                # vectorielle dr entre chaque paire de sphère
+                dr: vp.vector = posi - posj
+                if vp.mag2(dr) < r2:
+                    # liste numérotant toutes les paires de sphères en collision
+                    hitlist.append([i,j])
+        return hitlist
 
 
-def collisionAtomes(atome1: Particule, atome2: Particule) -> None:
-    # Positions et vitesses relatives des deux particules
-    v1: vp.vector = atome1.p/atome1.masse
-    v2: vp.vector = atome2.p/atome2.masse
-    rrel: vp.vector = atome2.pos - atome1.pos
-    vrel: vp.vector = v1 - v2
+    @staticmethod
+    def collisionAtomes(atome1: Particule, atome2: Particule, T: float) -> None:
+        # Positions et vitesses relatives des deux particules
+        v1: vp.vector = atome1.p/atome1.masse
+        v2: vp.vector = atome2.p/atome2.masse
+        rrel: vp.vector = atome2.pos - atome1.pos
+        vrel: vp.vector = v1 - v2
 
-    # Exclusion de cas où il n'y a pas de changements à faire, 2 cas:
-    # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
-    # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
-    if vrel.mag2 == 0 or rrel.mag > atome1.rayon+atome2.rayon:
-        return None
+        # Exclusion de cas où il n'y a pas de changements à faire, 2 cas:
+        # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
+        # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
+        if vrel.mag2 == 0 or rrel.mag > atome1.rayon+atome2.rayon:
+            return None
 
-    # Calcule la distance et temps d'interpénétration des sphères dures qui ne doit pas se produire dans ce modèle
-    dx: float = vp.dot(rrel, vrel.hat)
-    dy: float = vp.cross(rrel, vrel.hat).mag
-    # Alpha est l'angle du triangle composé de rrel, la trajectoire de l'atome 2 et la ligne
-    # entre le centre de l'atome 1 vers le centre de l'atome 2 où les deux atomes se touchent
-    alpha = vp.asin(dy / (atome1.rayon+atome2.rayon))
-    # Distance parcourue à l'intérieur du l'atome à partir du premier contact
-    d: float = (atome1.rayon+atome2.rayon) * vp.cos(alpha) - dx
-    # Temps écoulé pour se déplacer de la première collisions à la position à l'intérieur de l'atome
-    deltat: float = d / vrel.mag
+        # Calcule la nouvelle quantité de mouvement de l'électron avec sa norme distribuée selon une distribution
+        # Maxwell-Boltzman avec sa direction aléatoire
+            # À implémenter
 
-    # Transform momenta to center-of-momentum (com) frame
-    Vcom: vp.vector = (atome1.p+atome2.p) / (atome1.masse+atome2.masse)
-    pcom1 = atome1.p - atome1.masse*Vcom
-    pcom2 = atome2.p - atome2.masse*Vcom
+        # Calcule la distance à parcourir pour que l'électron quitte le noyau avec sa nouvelle trajectoire et avance l'électron
+        # pour ne pas qu'il interagisse avec le même coeur plusieurs fois d'affilée
+            # À implémenter
 
-    # Bounce in center-of-momentum (com) frame
-    rrel = vp.hat(rrel)
-    atome1.p -= 2 * vp.dot(pcom1, rrel) * rrel
-    atome2.p -= 2 * vp.dot(pcom2, rrel) * rrel
 
-    # Change l'interpénétration des sphères par la cinétique de collision,
-    # puis avance de deltat dans le temps, ramenant au même temps où sont
-    # rendues les autres sphères dans l'itération
-    atome1.pos += (atome1.p / atome1.masse - v1) * deltat
-    atome2.pos += (atome2.p / atome2.masse - v2) * deltat
+    @staticmethod
+    def checkCollisionsCoeurs(electrons: list[Particule], coeurs: list[Particule]) -> list[list[int]]
+        hitlist: list[int] = []
+
+        # distance critique où les 2 sphères entre en contact à la limite de leur rayon
+        r2: float = (atomes[0].rayon)**2
+
+        for i in range(len(coeurs)) :
+            coeur = coeurs[i]
+            # Distance pour qu'il y ait une collision, on assume que tous les électrons on la même taille
+            r: float = electrons[0].rayon+coeur.rayon
+
+            for j in range(len(electrons)):
+            electron = electrons[j]
+                # La boucle dans une boucle itère pour calculer cette distance
+                # vectorielle dr entre électron et coeur
+                dr: vp.vector = electron.pos - coeur.pos
+                if vp.mag(dr) < r:
+                    # Liste numérotant tous les électrons et les coeurs en collision
+                    hitlist.append([j, i])
+        return hitlist
+
+
+    @staticmethod
+    def collisionsElectrons(electron: Particule, coeur: Particule) -> None:
+        # Positions relative de l'électron et du coeur
+        rrel: vp.vector = electron.pos - coeur.pos
+
+        # Exclusion de cas où il n'y a pas de changements à faire, 2 cas:
+        # exactly same velocities si et seulement si p de l'électron devient nul, pas de collision
+        # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
+        if vp.mag(electron.p) == 0 or rrel.mag > atome1.rayon+atome2.rayon:
+            return None
 
 
 def canvas(L: float, rParticule: float) -> None:
