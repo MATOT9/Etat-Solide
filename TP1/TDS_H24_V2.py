@@ -120,7 +120,7 @@ class HardSphere:
 
             self.fig.show()
         elif anim is False:
-            for frame in range(self.n_frames):
+            for frame in range(self.n_atoms):
                 # Update frames without animation
                 self.update_particles(frame, anim)
         else:
