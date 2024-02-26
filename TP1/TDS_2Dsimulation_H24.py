@@ -15,7 +15,7 @@ import random
 
 # Third-party libraries
 from scipy import constants as cte
-import Particules
+from Particules import *
 import numpy as np
 import vpython as vp
 
@@ -106,7 +106,8 @@ def main():
         if i == analyseSphere:
             # Garde une sphère plus grosse et colorée parmis toutes les grises
             lastPos: vp.vector = posInit
-            atoms.append(particule(magenta))
+            atoms.append(particule(vp.color.magenta))
+            atoms[-1].sphere.radius *= 2
         else: 
             atoms.append(particule(gray))
 
@@ -119,16 +120,16 @@ def main():
         [atom.update(dt, L) for atom in atoms]
 
         # LET'S FIND THESE COLLISIONS!!!
-        hitlist: list[list[int]] = checkCollisions()
+        hitlist: list[list[int]] = checkCollisions(atoms)
 
         # Calcule le résultat des collisions et bouge les atomes
         for i, j in hitlist:
-            collisionAtomes(atomes[i], atomes[j])
+            collisionAtomes(atoms[i], atoms[j])
 
         # Met à jour la liste des variables à suivre
         # Unpack les paires de collisions
         collisions: list[int] = []
-        [collisions.extend(paire) for paire in pairesCollisions]
+        [collisions.extend(paire) for paire in hitlist]
 
         # Calcule le déplacement de analyseSphere et met à jour
         # lastPos pour l'utiliser à la prochaine itération
@@ -148,7 +149,9 @@ def main():
             dVec.append(vp.vector(0, 0, 0))
             dScalaire.append(0)
             tCollision.append(0)
+    
+    return atoms, dVec, dScalaire, tCollision, analyseSphere, dt, timeLoopLen
 
 
 if __name__ == "__main__":
-    main()
+    atoms, dVec, dScalaire, tCollision, analyseSphere, dt, timeLoopLen = main()

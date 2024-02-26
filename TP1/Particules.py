@@ -7,7 +7,7 @@ class Particule:
         self.p: vp.vector = qteMvt
         self.masse: float = masse
         self.rayon: float = rayon
-        self.sphere = vp.simple_sphere(self.pos, radius=rayon, color=couleur)
+        self.sphere = vp.simple_sphere(pos=position, radius=rayon, color=couleur)
 
 
     def update(self, dt: float, L: float):
@@ -16,12 +16,17 @@ class Particule:
         self.pos += vitesse * dt
 
         # Fait rebondir la particule lors d'une collision avec la boite
-        if self.pos.x < -L/2 or self.pos.x > L/2:
-            self.p.x = -self.p.x
-        if self.pos.y < -L/2 or self.pos.y > L/2:
-            self.p.y = -self.p.y
+        if self.pos.x < -L/2:
+            self.p.x = abs(self.p.x)
+        if self.pos.x > L/2:
+            self.p.x = -abs(self.p.x)
+        if self.pos.y < -L/2:
+            self.p.y = abs(self.p.y)
+        if self.pos.y > L/2:
+            self.p.y = -abs(self.p.y)
 
-        # self.draw() Peut être pas nécessaire
+        # Update la position des sphères pour l'animation
+        self.draw()
 
 
     def draw(self):
@@ -38,7 +43,7 @@ def collisionAtomes(atome1: Particule, atome2: Particule):
     # Exclusion de cas où il n'y a pas de changements à faire, 2 cas:
     # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
     # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
-    if vrel.mag2 == 0 or rrel.mag > 2*rAtom:
+    if vrel.mag2 == 0 or rrel.mag > atome1.rayon+atome2.rayon:
         return None
 
     # Calcule la distance et temps d'interpénétration des sphères dures qui ne doit pas se produire dans ce modèle
@@ -46,7 +51,7 @@ def collisionAtomes(atome1: Particule, atome2: Particule):
     dy: float = vp.cross(rrel, vrel.hat).mag
     # Alpha est l'angle du triangle composé de rrel, la trajectoire de l'atome 2 et la ligne
     # entre le centre de l'atome 1 vers le centre de l'atome 2 où les deux atomes se touchent
-    alpha = vp.asin(dy / (2 * rAtom))
+    alpha = vp.asin(dy / (atome1.rayon+atome2.rayon))
     # Distance parcourue à l'intérieur du l'atome à partir du premier contact
     d: float = (atome1.rayon+atome2.rayon) * vp.cos(alpha) - dx
     # Temps écoulé pour se déplacer de la première collisions à la position à l'intérieur de l'atome
