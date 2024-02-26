@@ -110,9 +110,9 @@ class HardSphere:
         return _p2[n]
 
     def run(self, anim=True):
+        nrange = range(self.n_atoms)
         if anim is True:
             self.set_layout()
-            nrange = range(self.n_atoms)
             self.fig.frames = tuple(map(self.init_frames, nrange))
             for frame in self.fig.frames:
                 # Update frames with animation
@@ -120,7 +120,7 @@ class HardSphere:
 
             self.fig.show()
         elif anim is False:
-            for frame in range(self.n_atoms):
+            for frame in nrange:
                 # Update frames without animation
                 self.update_particles(frame, anim)
         else:
@@ -224,12 +224,12 @@ class HardSphere:
         rrel = self.pos[:, np.newaxis, :] - self.pos[np.newaxis, :, :]
         dist = np.linalg.norm(rrel, axis=-1)
 
-        # Exclude self-collisions and check against particle size
-        mask = (dist > 0) & (dist <= 2 * self.r_atom)
-
         # Calculate relative velocity
         vrel = self.vel[:, np.newaxis, :] - self.vel[np.newaxis, :, :]
         dot_product = np.sum(rrel * vrel, axis=-1)
+
+        # Exclude self-collisions and check against particle size
+        mask = (dist > 0) & (dist < 2 * self.r_atom)
 
         # Select only pairs with approaching particles (dot_product < 0)
         mask &= dot_product < 0
