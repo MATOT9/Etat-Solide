@@ -1,8 +1,11 @@
 """Hard-sphere kinetic gas theory simulation using plotly."""
 
+__author__ = "Bruce Sherwood", "Maxime Tousignant-Tremblay"
 
+# Standard library
 from dataclasses import dataclass, field, InitVar
 
+# Third party libraries
 import numpy as np
 from scipy import constants as cte
 from plotly import graph_objs as go
@@ -17,23 +20,27 @@ class HardSphere:
         box_size
             The size of the simulated box.
         dt
-            The time step between frames.
+            The time step between frames. The velocity of each atom is first
+            computed according to kinetic gas theory. Use this parameter to
+            adjust overall velocity of particles to keep their motion visible
+            on the animation. Defaults to 30 μs.
         elasticity
             The coefficient of restitution. A value of 1 means 100% energy
             conservation after a collision.
         mass
             The mass of the simulated particles.
         n_atoms
-            The number of particles to use in the simulation.
+            The number of particles to use in the simulation. Defaults to 100.
+        n_frames
+            The number of frames in the animation. Affects duration, defaults
+            to 100 frames.
+        pix_size
+            The size of the box in pixels. Defaults to 600 pixels.
         r_atom
-            The particle size. Defaults to 5 to be visible on the animation.
-        scale
-            The reduction factor for velocity calculation. The velocity of each
-            atom is first computed according to kinetic gas theory. The scale
-            factor decrease velocity to keep the particles visible. Defaults to
-            2500.
+            The particle size. Defaults to 0.005 to be visible.
         T
-            The initial temperature used to compute velocity.
+            The initial temperature used to compute velocity. Defaults to room
+            temperature, 300 K.
 
     Attributes
     ----------
@@ -50,30 +57,32 @@ class HardSphere:
 
     """
 
-    # Constants
-    box_size: int = 10
-    dt: int | float = 1
+    # Class constants
+    box_size: int = 1
+    dt: int | float = 30e-6
     elasticity: int | float = 1  # Coefficient of restitution
     mass: float = cte.value("alpha particle mass")
-    n_atoms: int = 200
-    r_atom: int | float = 5
-    scale: int = 2500
+    n_atoms: int = 100
+    n_frames: int = 100
+    pix_size: int = 600
+    r_atom: int | float = 0.005
     T: InitVar[int | float] = 300
 
+    # Class properties
     fig: go.Figure = field(default_factory=go.Figure)
     pos: np.ndarray[np.float64] = field(init=False)
     vel: np.ndarray[np.float64] = field(init=False)
 
     def __post_init__(self, T):
+        # Generate initial positions with a uniform distribution
         self.pos = np.random.uniform(
             low=0,
             high=self.box_size,
             size=(self.n_atoms, 2),
         )
 
-        # Average velocity according to kinetic gas theory.
-        # Velocity is scaled down to be visible in the animation.
-        vavg = np.sqrt(3 * cte.k * T / self.mass) / self.scale
+        # Average velocity according to kinetic gas theory
+        vavg = np.sqrt(3 * cte.k * T / self.mass)
         self.vel = np.random.normal(loc=0, scale=vavg, size=(self.n_atoms, 2))
 
     @property
@@ -101,23 +110,38 @@ class HardSphere:
         return _p2[n]
 
     def run(self, anim=True):
-        self.set_layout()
-        nrange = range(self.n_atoms)
-        self.fig.frames = tuple(map(self.init_frames, nrange))
-        for n, frame in enumerate(self.fig.frames):
-            # Update frames with animation function
-            self.update_particles(n, frame)
-
         if anim is True:
+            self.set_layout()
+            nrange = range(self.n_atoms)
+            self.fig.frames = tuple(map(self.init_frames, nrange))
+            for frame in self.fig.frames:
+                # Update frames with animation
+                self.update_particles(frame)
+
             self.fig.show()
+        elif anim is False:
+            for frame in range(self.n_frames):
+                # Update frames without animation
+                self.update_particles(frame, anim)
+        else:
+            raise TypeError("anim parameter must be a boolean")
 
     def set_layout(self):
+        # Creating local copies of instance variables for faster access
         box_size = self.box_size
+        pix_size = self.pix_size
+
+        # Marker size (diameter) in Plotly is defined in pixels, not with
+        # respect to the coordinates system. We need to make sure both of them
+        # are proportional to get an accurate animation.
+        marker_size = 2 * self.r_atom * self.pix_size / self.box_size
+
         particles = go.Scatter(
             x=self.pos[:, 0],
             y=self.pos[:, 1],
             mode="markers",
-            marker=dict(size=self.r_atom, color="red"),
+            name="",
+            marker=dict(size=marker_size, color="red"),
         )
         self.fig.add_traces(particles)
 
@@ -126,19 +150,19 @@ class HardSphere:
             x=[0, box_size, box_size, 0, 0],
             y=[0, 0, box_size, box_size, 0],
             mode="lines",
-            line=dict(color="black", width=2),
+            line=dict(color="black", width=0.05),
         )
         self.fig.add_trace(container)
 
         # Set layout
         self.fig.update_layout(
-            xaxis=dict(range=[-0.5, box_size + 0.5]),
-            yaxis=dict(range=[-0.5, box_size + 0.5]),
+            xaxis=dict(range=[0, box_size]),
+            yaxis=dict(range=[0, box_size]),
             title="Hard Sphere Gas Animation",
             template="plotly_dark",
             showlegend=False,
-            width=600,
-            height=600,
+            width=pix_size,
+            height=pix_size,
         )
 
         # Set up animation
@@ -150,7 +174,7 @@ class HardSphere:
                             None,
                             {
                                 "frame":
-                                    {"duration": 50, "redraw": True},
+                                    {"duration": self.n_frames, "redraw": True},
                                     "fromcurrent": True,
                             }
                         ],
@@ -159,7 +183,7 @@ class HardSphere:
                     },
                     {
                         "args": [
-                            None,
+                            (None,),
                             {
                                 "frame": {"duration": 0, "redraw": True},
                                 "mode": "immediate",
@@ -195,20 +219,28 @@ class HardSphere:
         )
         return frame
 
-    def collisions(self, i):
-        for j in range(i + 1, self.n_atoms):
-            rrel = self.pos[i] - self.pos[j]
-            dist = np.linalg.norm(rrel)
+    def handle_collisions(self):
+        # Find relative positions and velocities for all pairs of particles
+        rrel = self.pos[:, np.newaxis, :] - self.pos[np.newaxis, :, :]
+        dist = np.linalg.norm(rrel, axis=-1)
 
-            if dist != 0 and dist < 2 * self.r_atom:
-                # Collision detected, update velocities
-                vrel = self.vel[i] - self.vel[j]
-                dot_product = np.dot(rrel, vrel)
-                if dot_product < 0:
-                    self.vel[i] -= dot_product / dist**2 * rrel
-                    self.vel[j] += dot_product / dist**2 * rrel
+        # Exclude self-collisions and check against particle size
+        mask = (dist > 0) & (dist <= 2 * self.r_atom)
 
-    def update_particles(self, n, frame):
+        # Calculate relative velocity.
+        vrel = self.vel[:, np.newaxis, :] - self.vel[np.newaxis, :, :]
+        dot_product = np.sum(rrel * vrel, axis=-1)
+
+        # Select only pairs with approaching particles (dot_product < 0)
+        mask &= dot_product < 0
+
+        # Update velocities using the collision formula for selected pairs
+        rrel_selected = np.where(mask[..., np.newaxis], rrel, 0)
+        dist_selected = np.where(mask, dist, np.inf)
+        dv = (dot_product / dist_selected**2)[..., np.newaxis] * rrel_selected
+        self.vel += np.sum(dv, axis=1)
+
+    def update_particles(self, frame, anim=True):
         box_size = self.box_size
 
         # Update positions
@@ -223,7 +255,9 @@ class HardSphere:
         self.vel[self.pos == box_size] *= -self.elasticity
 
         # Handle collisions between particles
-        self.collisions(n)
+        self.handle_collisions()
 
-        frame.data[0].x = self.pos[:, 0]
-        frame.data[0].y = self.pos[:, 1]
+        # Update frame data if working with animation
+        if anim is True:
+            frame.data[0].x = self.pos[:, 0]
+            frame.data[0].y = self.pos[:, 1]
