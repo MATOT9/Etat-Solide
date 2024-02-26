@@ -227,7 +227,7 @@ class HardSphere:
         # Exclude self-collisions and check against particle size
         mask = (dist > 0) & (dist <= 2 * self.r_atom)
 
-        # Calculate relative velocity.
+        # Calculate relative velocity
         vrel = self.vel[:, np.newaxis, :] - self.vel[np.newaxis, :, :]
         dot_product = np.sum(rrel * vrel, axis=-1)
 
