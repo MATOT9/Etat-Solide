@@ -60,6 +60,7 @@ class HardSphere:
     # Class constants
     box_size: int = 1
     dt: int | float = 30e-6
+    drude: bool = False
     elasticity: int | float = 1  # Coefficient of restitution
     mass: float = cte.value("alpha particle mass")
     n_atoms: int = 100
@@ -81,8 +82,16 @@ class HardSphere:
             size=(self.n_atoms, 2),
         )
 
-        # Average velocity according to kinetic gas theory
-        vavg = np.sqrt(3 * cte.k * T / self.mass)
+        # Compute average velocity according to the selected model
+        if self.drude is True:
+            # Drude model
+            vavg = np.sqrt(cte.k * T / self.mass)
+        else:
+            # Kinetic gas theory
+            vavg = np.sqrt(3 * cte.k * T / self.mass)
+
+        # Generate initial velocities with a normal distribution scaled
+        # to the average particles velocities 
         self.vel = np.random.normal(loc=0, scale=vavg, size=(self.n_atoms, 2))
 
     @property
@@ -221,11 +230,11 @@ class HardSphere:
 
     def handle_collisions(self):
         # Find relative positions and velocities for all pairs of particles
-        rrel = self.pos[:, np.newaxis, :] - self.pos[np.newaxis, :, :]
+        rrel = self.pos[:, None, :] - self.pos[None, ...]
         dist = np.linalg.norm(rrel, axis=-1)
 
         # Calculate relative velocity
-        vrel = self.vel[:, np.newaxis, :] - self.vel[np.newaxis, :, :]
+        vrel = self.vel[:, None, :] - self.vel[None, ...]
         dot_product = np.sum(rrel * vrel, axis=-1)
 
         # Exclude self-collisions and check against particle size
@@ -234,11 +243,20 @@ class HardSphere:
         # Select only pairs with approaching particles (dot_product < 0)
         mask &= dot_product < 0
 
-        # Update velocities using the collision formula for selected pairs
-        rrel_selected = np.where(mask[..., np.newaxis], rrel, 0)
-        dist_selected = np.where(mask, dist, np.inf)
-        dv = (dot_product / dist_selected**2)[..., np.newaxis] * rrel_selected
-        self.vel += np.sum(dv, axis=1)
+        # Continue only with colliding particles
+        rrel_coll = np.where(mask[..., None], rrel, 0)
+        dist_coll = np.where(mask, dist, np.inf)
+
+        # Collision response for Drude model or kinetic gas theory
+        if self.drude is True:
+            ke = 1 / (4 * np.pi * cte.epsilon_0)
+            forces = (cte.e**2 * ke / dist_coll**2)[..., None] * rrel_coll
+            forces_total = np.sum(forces, axis=1)
+            dv = forces_total * self.dt / self.mass
+        else:
+            dv = (dot_product / dist_coll**2)[..., None] * rrel_coll
+            dv = np.sum(dv, axis=1)
+        return dv
 
     def update_particles(self, frame, anim=True):
         box_size = self.box_size
@@ -255,7 +273,8 @@ class HardSphere:
         self.vel[self.pos == box_size] *= -self.elasticity
 
         # Handle collisions between particles
-        self.handle_collisions()
+        dv = self.handle_collisions()
+        self.vel += dv
 
         # Update frame data if working with animation
         if anim is True:
