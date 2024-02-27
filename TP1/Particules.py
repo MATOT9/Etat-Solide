@@ -23,7 +23,7 @@ class Particule:
 
     def update(self, dt: float, L: float, E: float = 0) -> None:
         # Le champ électrique accélère la particule
-        self.p += self.charge*E
+        self.p += self.charge*E*vp.vector(1, 0, 0)
 
         # Fait un pas à la particule pour un temps dt
         vitesse: vp.vector = self.p/self.masse
@@ -179,7 +179,8 @@ def canvas(L: float, rParticule: float) -> None:
     )
 
 
-def setupParticules(L: float, masse: float, rayon: float, nParticules: int, T: float, analyseSphere: int, render: bool = True) -> list[Particule]:
+    def setupParticules(L: float, masse: float, rayon: float, nParticules: int, T: float,
+            analyseSphere: int, rand: bool = True render: bool = True) -> list[Particule]:
     # POSITION ET QUANTITÉ DE MOUVEMENT INITIALE DES SPHÈRES
     # Liste qui contient les atomes
     atoms: list[Particule] = []
@@ -196,10 +197,13 @@ def setupParticules(L: float, masse: float, rayon: float, nParticules: int, T: f
         posInit = vp.vector (*xyz)
 
         # Qte de mouvement initiale de direction aléatoire avec norme selon l'équipartition
-        phi: float = 2 * np.pi * random.random()
-        px: float = pavg * np.cos(phi)
-        py: float = pavg * np.sin(phi)
-        pInit = vp.vector (px, py, 0)
+        if rand:
+            phi: float = 2 * np.pi * random.random()
+            px: float = pavg * np.cos(phi)
+            py: float = pavg * np.sin(phi)
+            pInit = vp.vector(px, py, 0)
+        else:
+            pInit = vp.vector(pavg, 0, 0)
 
         # On ajoute un atome à la liste des atomes, si render=False, l'attribut sphere de l'atome n'est pas initialisé
         particule = partial(Particule, rayon, posInit, p=pInit, masse=masse)
