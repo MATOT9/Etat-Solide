@@ -23,7 +23,7 @@ class Particule:
 
     def update(self, dt: float, L: float, E: float = 0) -> None:
         # Le champ électrique accélère la particule
-            # À faire
+        self.p += self.charge*E
 
         # Fait un pas à la particule pour un temps dt
         vitesse: vp.vector = self.p/self.masse
