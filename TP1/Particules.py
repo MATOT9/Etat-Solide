@@ -17,8 +17,12 @@ class Particule:
         self.masse: float = masse
         self.rayon: float = rayon
         self.charge: float = charge
+
         if couleur:
             self.sphere = vp.simple_sphere(pos=position, radius=rayon, color=couleur)
+            self.render = True
+        else:
+            self.render = False
 
 
     def update(self, dt: float, L: float, E: float = 0) -> None:
@@ -40,7 +44,7 @@ class Particule:
             self.p.y = -abs(self.p.y)
 
         # Update la position des sphères pour l'animation
-        if self.sphere:
+        if self.render:
             self.sphere.pos = self.pos
 
 
@@ -153,7 +157,7 @@ class Particule:
         # Calcule la distance à parcourir pour que l'électron quitte le noyau avec sa nouvelle trajectoire
         # et avance l'électron pour ne pas qu'il interagisse avec le même coeur plusieurs fois d'affilée
         # cos de l'angle entre -rrel et p
-        cosTheta: float = vp.dot(-rrel, electron.p)/(r*p)
+        cosTheta: float = vp.dot(-rrel.hat, electron.p.hat)
         # Distance à parcourir
         d = r*cosTheta + np.sqrt(r**2*cosTheta**2 + R**2-r**2)
         # On avance en direction de p d'une distance d
@@ -179,8 +183,8 @@ def canvas(L: float, rParticule: float) -> None:
     )
 
 
-    def setupParticules(L: float, masse: float, rayon: float, nParticules: int, T: float,
-            analyseSphere: int, rand: bool = True render: bool = True) -> list[Particule]:
+def setupParticules(L: float, masse: float, rayon: float, nParticules: int, T: float,
+                    analyseSphere: int, charge: float = 0, rand: bool = True, render: bool = True) -> list[Particule]:
     # POSITION ET QUANTITÉ DE MOUVEMENT INITIALE DES SPHÈRES
     # Liste qui contient les atomes
     atoms: list[Particule] = []
@@ -198,12 +202,12 @@ def canvas(L: float, rParticule: float) -> None:
 
         # Qte de mouvement initiale de direction aléatoire avec norme selon l'équipartition
         if rand:
-            phi: float = 2 * np.pi * random.random()
-            px: float = pavg * np.cos(phi)
-            py: float = pavg * np.sin(phi)
-            pInit = vp.vector(px, py, 0)
+            phi: float = random.uniform(0, 2*np.pi)
         else:
-            pInit = vp.vector(pavg, 0, 0)
+            phi: float = random.uniform(-np.pi/12, np.pi/12)
+        px: float = pavg * np.cos(phi)
+        py: float = pavg * np.sin(phi)
+        pInit = vp.vector(px, py, 0)
 
         # On ajoute un atome à la liste des atomes, si render=False, l'attribut sphere de l'atome n'est pas initialisé
         particule = partial(Particule, rayon, posInit, p=pInit, masse=masse)
@@ -212,7 +216,7 @@ def canvas(L: float, rParticule: float) -> None:
         else:
             couleur = None
 
-        atoms.append(particule(couleur=couleur))
+        atoms.append(particule(charge=charge, couleur=couleur))
 
     if render:
         atoms[analyseSphere].sphere.radius *= 2
@@ -251,7 +255,9 @@ def setupCoeurs(maille: list[vp.vector], motif: list[list[float, vp.vector]], L:
     coeurs.extend(coeursMotif)
     
     rayon: int = 0
-    coeursPlaces: int = 0
+    # Nombre de boucles à effectuer sans coeurs placés, aide pour les
+    # mailles primitives qui ne sont pas carrées
+    tentatives: int = 3
     while True:
         # Nombre de coeurs placés au cours de l'itération, quitte
         # la boucle si aucun n'est placé durant l'itération en cours
@@ -282,6 +288,8 @@ def setupCoeurs(maille: list[vp.vector], motif: list[list[float, vp.vector]], L:
             coeursPlaces += places
 
         if coeursPlaces == 0:
-            break
+            tentatives -= 1
+            if tentatives == 0:
+                break
 
     return coeurs
