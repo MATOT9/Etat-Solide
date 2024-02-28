@@ -21,7 +21,7 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int, E: float = 0, rand: bo
 
     # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
     # change this to have more or fewer atoms
-    nElec: int = 500
+    nElec: int = 200
     # Maille primitive du cristal
     maillePrimitive: list[vp.vector] = [vp.vector(3*L/10, 0, 0), np.sqrt(3)*L/10 * vp.vector(np.cos(np.pi/6), np.sin(np.pi/6), 0)]
 
@@ -34,8 +34,12 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int, E: float = 0, rand: bo
     coeurs: list[Particule] = setupCoeurs(maillePrimitive, motif, L, render=render)
 
     # BOUCLE PRINCIPALE POUR L'ÉVOLUTION TEMPORELLE DE PAS dt
-    pMoy, pAnalysSphere = np.zeros(timeLoopLen), np.zeros(timeLoopLen) #initialise les array question 2
-    posx, posy = np.zeros(timeLoopLen), np.zeros(timeLoopLen) #initalise liste de positions question 4
+    # Initialisation des listes 
+    posMoy: list[vp.vector] = []
+    pMoy: list[float] = []
+    pAnalyseSphere: list[float] = []
+    nbCollisions: int = 0
+
     for loop in range(timeLoopLen):
         # limite la vitesse de calcul de la simulation pour que l'animation soit
         # visible à l'oeil humain!
@@ -43,25 +47,25 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int, E: float = 0, rand: bo
             vp.rate(60)
 
         [electron.update(dt, L, E) for electron in electrons]
-        allP = [electron.p for electron in electrons] # vecteurs p de l'ittération
+
+        # Données nécessaires pour les questions dans le notebook
         allPos = [electron.pos for electron in electrons] # vecteurs pos de l'ittération
-        sumP = vp.vector(0, 0 ,0)
-        #pMoy[loop] = sum(allP)/len(allP)
-        for P in allP:
-            sumP += P
-        pMoy[loop] = (sumP.x**2+sumP.y**2)**0.5/len(allP)
-        pAS = allP[analyseSphere]
-        pAnalysSphere[loop] = (pAS.x**2+pAS.y**2)**0.5
+        allP = [electron.p for electron in electrons] # vecteurs p de l'ittération
+        posMoy.append(sum(allPos, vp.vector(0, 0, 0))/len(allPos))
+        pMoy.append(vp.mag(sum(allP, vp.vector(0, 0, 0)))/len(allP))
+        pAnalyseSphere.append(vp.mag(allP[analyseSphere]))
 
         # LET'S FIND THESE COLLISIONS!!!
         hitlist: list[list[int]] = Particule.checkCollisionsElectrons(electrons, coeurs)
+        # On compte le nombre total de collisions
+        nbCollisions += len(hitlist)
 
         # Calcule le résultat des collisions et bouge les atomes
         for i, j in hitlist:
             Particule.collisionsElectrons(electrons[i], coeurs[j], T)
         
     
-    return electrons, pMoy, pAnalysSphere
+    return posMoy, pMoy, pAnalyseSphere, timeLoopLen*dt*nElec/nbCollisions
 
 
 if __name__ == "__main__":
@@ -71,7 +75,11 @@ if __name__ == "__main__":
     rand: bool = bool(int(sys.argv[2]))
     render: bool = bool(int(sys.argv[3]))
     dt: float = 2e-8         # pas d'incrémentation temporel
-    timeLoopLen: int = 1000  # temps de simulation
+    timeLoopLen: int = 100  # temps de simulation
     analyseSphere: int = 56 # à changer si analyse autre atome He (int [0, 199])
     tVector = np.linspace(0, dt*(timeLoopLen-1), timeLoopLen) #vecteur de temps
-    electrons, pMoy, pAnalysSphere = main(dt, timeLoopLen, analyseSphere, E=E, rand=rand, render=render)
+    posMoy, pMoy, pAnalysSphere, tau = main(dt, timeLoopLen, analyseSphere, E=E, rand=rand, render=render)
+
+    print(posMoy)
+    print(pMoy)
+    print(tau)
