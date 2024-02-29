@@ -10,9 +10,10 @@ Created on Fri Feb  5 15:40:27 2021
 """
 
 # Third-party libraries
-from scipy import constants as cte
 from Particules import *
+from scipy import constants as cte
 import numpy as np
+import sys
 import vpython as vp
 
 
@@ -25,6 +26,9 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int) -> [list[Particule], l
     dVec: list[vp.vector] = [vp.vector(0, 0, 0)]
     dScalaire: list[float] = [0]
     tCollision: list[float] = [0]
+
+    # Moyenne des normes des vitesses pour une itération pour le TCL
+    TCL: list[float] = []
 
     # Déclaration de variables physiques "Typical values"
     mass: float = cte.value("alpha particle mass")
@@ -77,12 +81,27 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int) -> [list[Particule], l
             dVec.append(vp.vector(0, 0, 0))
             dScalaire.append(0)
             tCollision.append(0)
+
+        # On ajoute la moyenne centrée réduides normes des électrons pour démontrer que la moyenne
+        # de |v| est distribué selon une distribution normale
+        # On fait la moyenne des nAtoms |v| distribués selon MB
+        X_i: list[float] = [vp.mag(atom.p)/mass for atom in atoms]
+        X_n: float = sum(X_i)/nAtoms
+
+        # On centre et réduit
+        # scale: float = np.sqrt(300*cte.k/mass)
+        # mu: float = 2*scale*np.sqrt(2/np.pi)
+        mu = np.mean(X_i)
+        # sigma2: float = scale**2 * (3*np.pi-8)/np.pi
+        sigma2 = np.var((X_i))
+
+        TCL.append([X_n, mu, sigma2])
     
-    return atoms, dVec, dScalaire, tCollision
+    return atoms, dVec, dScalaire, tCollision, TCL
 
 
 if __name__ == "__main__":
+    timeLoopLen: int = int(sys.argv[1]) # Nombre d'itérations
     dt: float = 1e-5         # pas d'incrémentation temporel
-    timeLoopLen: int = 1000  # temps de simulation
     analyseSphere: int = 106 # à changer si analyse autre atome He (int [0, 199])
-    atoms, dVec, dScalaire, tCollision = main(dt, timeLoopLen, analyseSphere)
+    atoms, dVec, dScalaire, tCollision, TCL = main(dt, timeLoopLen, analyseSphere)
