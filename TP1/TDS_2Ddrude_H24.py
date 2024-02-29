@@ -80,7 +80,3 @@ if __name__ == "__main__":
     analyseSphere: int = 56 # à changer si analyse autre atome He (int [0, 199])
     tVector = np.linspace(0, dt*(timeLoopLen-1), timeLoopLen) #vecteur de temps
     posMoy, pMoy, pAnalysSphere, tau = main(dt, timeLoopLen, analyseSphere, E=E, rand=rand, render=render)
-
-    #print(posMoy)
-    #print(pMoy)
-    print(tau)
