@@ -28,7 +28,7 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int) -> [list[Particule], l
     tCollision: list[float] = [0]
 
     # Moyenne des normes des vitesses pour une itération pour le TCL
-    TCL: list[float] = []
+    S_n: list[float] = []
 
     # Déclaration de variables physiques "Typical values"
     mass: float = cte.value("alpha particle mass")
@@ -82,26 +82,15 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int) -> [list[Particule], l
             dScalaire.append(0)
             tCollision.append(0)
 
-        # On ajoute la moyenne centrée réduides normes des électrons pour démontrer que la moyenne
-        # de |v| est distribué selon une distribution normale
-        # On fait la moyenne des nAtoms |v| distribués selon MB
-        X_i: list[float] = [vp.mag(atom.p)/mass for atom in atoms]
-        X_n: float = sum(X_i)/nAtoms
-
-        # On centre et réduit
-        # scale: float = np.sqrt(300*cte.k/mass)
-        # mu: float = 2*scale*np.sqrt(2/np.pi)
-        mu = np.mean(X_i)
-        # sigma2: float = scale**2 * (3*np.pi-8)/np.pi
-        sigma2 = np.var((X_i))
-
-        TCL.append([X_n, mu, sigma2])
+        # On fait la somme des magnitudes des vitesses des 200 atomes
+        S_i: float = sum([vp.mag(atom.p)/mass for atom in atoms])
+        S_n.append(S_i)
     
-    return atoms, dVec, dScalaire, tCollision, TCL
+    return atoms, dVec, dScalaire, tCollision, S_n
 
 
 if __name__ == "__main__":
     timeLoopLen: int = int(sys.argv[1]) # Nombre d'itérations
     dt: float = 1e-5         # pas d'incrémentation temporel
     analyseSphere: int = 106 # à changer si analyse autre atome He (int [0, 199])
-    atoms, dVec, dScalaire, tCollision, TCL = main(dt, timeLoopLen, analyseSphere)
+    atoms, dVec, dScalaire, tCollision, S_n = main(dt, timeLoopLen, analyseSphere)

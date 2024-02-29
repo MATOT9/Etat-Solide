@@ -168,7 +168,7 @@ def canvas(L: float, rParticule: float) -> None:
     gray = vp.color.gray(0.7)   # color of edges of container and spheres below
     animation = vp.canvas(width=750, height=500)
     animation.range = L
-    animation.title = 'Cinétique des gaz parfaits'
+    animation.title = 'Modèle cinétique'
 
     d: float = L/2 + rParticule
     cadre = vp.curve(color=gray, radius=0.005)

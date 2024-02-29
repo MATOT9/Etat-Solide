@@ -48,12 +48,6 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int, E: float = 0, rand: bo
 
         [electron.update(dt, L, E) for electron in electrons]
 
-        # Données nécessaires pour les questions dans le notebook
-        allPos = [electron.pos for electron in electrons] # vecteurs pos de l'ittération
-        allP = [electron.p for electron in electrons] # vecteurs p de l'ittération
-        posMoy.append(sum(allPos, vp.vector(0, 0, 0))/len(allPos))
-        pMoy.append(vp.mag(sum(allP, vp.vector(0, 0, 0)))/len(allP))
-        pAnalyseSphere.append(vp.mag(allP[analyseSphere]))
 
         # LET'S FIND THESE COLLISIONS!!!
         hitlist: list[list[int]] = Particule.checkCollisionsElectrons(electrons, coeurs)
@@ -63,6 +57,13 @@ def main(dt: float, timeLoopLen: int, analyseSphere: int, E: float = 0, rand: bo
         # Calcule le résultat des collisions et bouge les atomes
         for i, j in hitlist:
             Particule.collisionsElectrons(electrons[i], coeurs[j], T)
+
+        # Données nécessaires pour les questions dans le notebook
+        allPos = [electron.pos for electron in electrons] # vecteurs pos de l'ittération
+        allP = [electron.p for electron in electrons] # vecteurs p de l'ittération
+        posMoy.append(sum(allPos, vp.vector(0, 0, 0))/len(allPos))
+        pMoy.append(vp.mag(sum(allP, vp.vector(0, 0, 0)))/len(allP))
+        pAnalyseSphere.append(vp.mag(allP[analyseSphere]))
         
     
     return posMoy, pMoy, pAnalyseSphere, timeLoopLen*dt*nElec/nbCollisions
@@ -75,11 +76,11 @@ if __name__ == "__main__":
     rand: bool = bool(int(sys.argv[2]))
     render: bool = bool(int(sys.argv[3]))
     dt: float = 2e-8         # pas d'incrémentation temporel
-    timeLoopLen: int = 100  # temps de simulation
+    timeLoopLen: int = 1000  # temps de simulation
     analyseSphere: int = 56 # à changer si analyse autre atome He (int [0, 199])
     tVector = np.linspace(0, dt*(timeLoopLen-1), timeLoopLen) #vecteur de temps
     posMoy, pMoy, pAnalysSphere, tau = main(dt, timeLoopLen, analyseSphere, E=E, rand=rand, render=render)
 
-    print(posMoy)
-    print(pMoy)
+    #print(posMoy)
+    #print(pMoy)
     print(tau)
